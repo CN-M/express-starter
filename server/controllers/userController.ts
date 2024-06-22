@@ -6,7 +6,7 @@ import { generateAccessToken, generateRefreshToken } from "../config/util";
 
 require("dotenv").config();
 
-const { SECRET, REFRESH_SECRET, NODE_ENV } = process.env;
+const { REFRESH_SECRET, NODE_ENV } = process.env;
 
 require("dotenv").config();
 
@@ -46,23 +46,22 @@ export const registerUser = async (req: Request, res: Response) => {
         lastName,
         email,
       });
-      // const accessToken = generateAccessToken(id);
+
       const refreshToken = generateRefreshToken({
         id,
         firstName,
         lastName,
         email,
       });
-      // const refreshToken = generateRefreshToken(id);
 
-      res.cookie("refreshToken", refreshToken);
-
-      // res.cookie("refreshToken", refreshToken, {
-      //   httpOnly: true,
-      //   secure: NODE_ENV === "production",
-      //   sameSite: NODE_ENV === "production" ? "none" : "lax",
-      //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 Days
-      // });
+      res
+        .cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: NODE_ENV === "production",
+          sameSite: NODE_ENV === "production" ? "strict" : "lax",
+          maxAge: 15 * 24 * 60 * 60 * 1000, // 15 Days
+        })
+        .header("authorization", accessToken);
 
       return res.status(201).json({
         id,
@@ -109,23 +108,22 @@ export const loginUser = async (req: Request, res: Response) => {
       lastName,
       email,
     });
-    // const accessToken = generateAccessToken(id);
+
     const refreshToken = generateRefreshToken({
       id,
       firstName,
       lastName,
       email,
     });
-    // const refreshToken = generateRefreshToken(id);
 
-    res.cookie("refreshToken", refreshToken);
-
-    // res.cookie("refreshToken", refreshToken, {
-    //   httpOnly: true,
-    //   secure: NODE_ENV === "production",
-    //   sameSite: NODE_ENV === "production" ? "none" : "lax",
-    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 Days
-    // });
+    res
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: NODE_ENV === "production",
+        sameSite: NODE_ENV === "production" ? "strict" : "lax",
+        maxAge: 15 * 24 * 60 * 60 * 1000, // 15 Days
+      })
+      .header("authorization", accessToken);
 
     return res.status(201).json({
       id,
@@ -141,9 +139,8 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
-  console.log("logout console:", req.cookies.refreshToken);
-
   try {
+    console.log("logout console:", req.cookies["refreshToken"]);
     res.clearCookie("refreshToken");
     return res.status(200).json({ message: "User successfully logged out" });
   } catch (err) {
@@ -153,11 +150,7 @@ export const logoutUser = async (req: Request, res: Response) => {
 };
 
 export const refreshUser = async (req: Request, res: Response) => {
-  // const refreshToken = req.headers["x-refresh-token"];
-  // const refreshToken = req.body.token;
-  const refreshTokenTwo = req.cookies.refreshToken;
   const refreshToken = req.cookies["refreshToken"];
-  console.log("test", req.cookies);
 
   if (!refreshToken) {
     return res.status(401).json({ error: "Not authorised, no refresh token!" });
@@ -181,9 +174,11 @@ export const refreshUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "User not found" });
     }
 
-    const newAccessToken = generateAccessToken(id);
+    const newAccessToken = generateAccessToken(user);
 
-    req.headers.authorization = `Bearer ${newAccessToken}`;
+    console.log("New User successfully refreshed");
+
+    res.header("authorization", newAccessToken);
 
     req.user = user;
   } catch (err) {

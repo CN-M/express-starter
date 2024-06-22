@@ -12,11 +12,11 @@ import {
 } from "../controllers/userController";
 import { protect } from "../middleware/authMiddleware";
 
-router.route("/register").post(registerUser);
+router.route("/").delete(protect, deleteUser).put(protect, updateUser);
+
 router.route("/login").post(loginUser);
+router.route("/register").post(registerUser);
 router.route("/logout").post(logoutUser);
 router.route("/refresh").post(refreshUser);
-
-router.route("/:id").delete(protect, deleteUser).put(protect, updateUser);
 
 export default router;

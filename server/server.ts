@@ -15,8 +15,9 @@ import { catch404, errorHandler } from "./middleware/errorMiddleware";
 import taskRoute from "./routes/taskRoute";
 import userRoute from "./routes/userRoute";
 
-const { PORT } = process.env;
+const { PORT, NODE_ENV } = process.env;
 const port = PORT || 3000;
+const node_env = NODE_ENV || "development";
 
 const app: Express = express();
 app.set("trust proxy", 1);

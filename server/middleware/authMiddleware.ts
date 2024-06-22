@@ -15,12 +15,9 @@ declare global {
       email: string;
       firstName: string;
       lastName: string;
+      //   password: string | null;
     }
-  }
-}
 
-declare global {
-  namespace Express {
     interface Request {
       user?: User;
     }
@@ -37,14 +34,15 @@ export const protect = async (
       ? req.headers.authorization.split(" ")[1]
       : null;
 
-  if (!accessToken) {
-    return res.status(401).json({ error: "Not authorized, no token" });
+  let refreshToken = req.cookies["refreshToken"]
+    ? req.cookies["refreshToken"]
+    : null;
+
+  if (!accessToken || !refreshToken) {
+    return res.status(401).json({ error: "Not authorized, no tokens" });
   }
 
   try {
-    console.log("Refresh Token:", req.cookies.refreshToken);
-    console.log("Cookies:", req.cookies);
-
     const { id } = jwt.verify(accessToken, SECRET!) as JwtPayload;
 
     const user = await prisma.user.findFirst({
@@ -63,18 +61,9 @@ export const protect = async (
     }
 
     req.user = user;
-
     next();
   } catch (err) {
     if (err instanceof TokenExpiredError) {
-      const refreshToken = req.cookies.refreshToken;
-
-      if (!refreshToken) {
-        return res
-          .status(401)
-          .json({ error: "Not authorised, no refresh token!" });
-      }
-
       try {
         const { id } = jwt.verify(refreshToken, REFRESH_SECRET!) as JwtPayload;
 
@@ -93,13 +82,11 @@ export const protect = async (
           return res.status(400).json({ error: "User not found" });
         }
 
-        const newAccessToken = generateAccessToken(id);
-        // res.setHeader("x-access-token", newAccessToken);
+        const newAccessToken = generateAccessToken(user);
+        console.log("New Access Token Generated");
 
-        req.headers.authorization = `Bearer ${newAccessToken}`;
-
+        res.header("authorization", newAccessToken);
         req.user = user;
-
         next();
       } catch (err) {
         console.error("Error:", err);
